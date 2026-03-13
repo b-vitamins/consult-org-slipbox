@@ -32,7 +32,7 @@
                 :line 3)))
     (cl-letf* (((symbol-function 'consult--dynamic-collection)
                 (lambda (fun &rest _keys) fun))
-               ((symbol-function 'org-slipbox-node-read--completions)
+               ((symbol-function 'org-slipbox-node-completion-candidates)
                 (lambda (_input _filter _sort)
                   (list (cons (propertize "Alpha | alpha.org:3" 'node node) node))))
                ((symbol-function 'consult--read)
@@ -46,7 +46,7 @@
   "Node reader should preserve new titles when matches are not required."
   (cl-letf* (((symbol-function 'consult--dynamic-collection)
               (lambda (fun &rest _keys) fun))
-             ((symbol-function 'org-slipbox-node-read--completions)
+             ((symbol-function 'org-slipbox-node-completion-candidates)
               (lambda (_input _filter _sort) nil))
              ((symbol-function 'consult--read)
               (lambda (_collection &rest plist)
@@ -63,7 +63,7 @@
                 :line 5)))
     (cl-letf* (((symbol-function 'consult--dynamic-collection)
                 (lambda (fun &rest _keys) fun))
-               ((symbol-function 'org-slipbox-ref-read--completions)
+               ((symbol-function 'org-slipbox-ref-completion-candidates)
                 (lambda (_input _filter)
                   (list (cons (propertize "@smith2024"
                                           'org-slipbox-ref-node node)

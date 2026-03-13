@@ -19,3 +19,6 @@
 
 - README now documents package installation, `consult-buffer` integration, and
   verification commands.
+- Switched the package to `org-slipbox`'s public completion, annotation,
+  visit, and link-insertion helpers so cross-package integration no longer
+  depends on double-hyphen internals.

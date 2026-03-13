@@ -129,6 +129,14 @@ This source is installed by `consult-org-slipbox-mode'."
   "Return the preferred display title for NODE."
   (or (plist-get node :title) ""))
 
+(defun consult-org-slipbox--plist-sequence (value)
+  "Normalize JSON-derived VALUE into an Emacs list."
+  (cond
+   ((null value) nil)
+   ((vectorp value) (append value nil))
+   ((listp value) value)
+   (t (list value))))
+
 (defun consult-org-slipbox--relative-file (record)
   "Return the relative indexed file path from RECORD."
   (or (plist-get record :file_path) ""))
@@ -410,7 +418,7 @@ they only appear in `consult-org-slipbox-buffer-source'."
 
 (defun consult-org-slipbox--node-candidates (input filter-fn sort)
   "Return Consult candidates for INPUT, FILTER-FN, and SORT."
-  (cl-loop for (display . node) in (org-slipbox-node-read--completions
+  (cl-loop for (display . node) in (org-slipbox-node-completion-candidates
                                     input filter-fn sort)
            for index from 0
            collect
@@ -422,7 +430,7 @@ they only appear in `consult-org-slipbox-buffer-source'."
 
 (defun consult-org-slipbox--ref-candidates (input filter-fn)
   "Return Consult ref candidates for INPUT and FILTER-FN."
-  (cl-loop for (display . node) in (org-slipbox-ref-read--completions
+  (cl-loop for (display . node) in (org-slipbox-ref-completion-candidates
                                     input filter-fn)
            for index from 0
            collect
@@ -586,11 +594,10 @@ REQUIRE-MATCH enforces an indexed selection.  PROMPT defaults to \"Node: \".
 When REQUIRE-MATCH is nil and the user enters a new title, return a plist with
 only `:title'."
   (let* ((prompt (or prompt "Node: "))
-         (sort (org-slipbox--resolve-node-sort sort-fn))
          (collection
           (consult--dynamic-collection
            (lambda (input)
-             (consult-org-slipbox--node-candidates input filter-fn sort))
+             (consult-org-slipbox--node-candidates input filter-fn sort-fn))
            :min-input 0
            :throttle consult-org-slipbox-dynamic-throttle
            :debounce consult-org-slipbox-dynamic-debounce))
@@ -603,7 +610,7 @@ only `:title'."
            :require-match require-match
            :category 'org-slipbox-node
            :history 'org-slipbox-node-history
-           :annotate #'org-slipbox--node-completion-annotation
+           :annotate #'org-slipbox-node-completion-annotation
            :lookup #'consult-org-slipbox--candidate-lookup
            :state (consult-org-slipbox--preview-state
                    #'consult-org-slipbox--candidate-target))))
@@ -636,7 +643,7 @@ PROMPT defaults to \"Ref: \"."
      :require-match t
      :category 'org-slipbox-ref
      :history 'org-slipbox-ref-history
-     :annotate #'org-slipbox--ref-completion-annotation
+     :annotate #'org-slipbox-ref-completion-annotation
      :lookup #'consult--lookup-candidate
      :state (consult-org-slipbox--preview-state
              #'consult-org-slipbox--candidate-target))))
@@ -707,7 +714,7 @@ INITIAL-INPUT seeds the minibuffer when called non-interactively."
   (interactive "P")
   (let ((node (consult-org-slipbox-ref-read initial-input nil "Ref: ")))
     (when node
-      (org-slipbox--visit-node node other-window)
+      (org-slipbox-node-visit node other-window)
       node)))
 
 ;;;###autoload
@@ -749,7 +756,7 @@ INITIAL-INPUT seeds the minibuffer when called non-interactively."
 With OTHER-WINDOW, visit the selected occurrence in another window."
   (interactive "P")
   (let* ((node (consult-org-slipbox--current-or-read-node "Backlinks for node: "))
-         (records (org-slipbox--plist-sequence
+         (records (consult-org-slipbox--plist-sequence
                    (plist-get
                     (org-slipbox-rpc-backlinks
                      (plist-get node :node_key)
@@ -773,7 +780,7 @@ With OTHER-WINDOW, visit the selected occurrence in another window."
 With OTHER-WINDOW, visit the selected occurrence in another window."
   (interactive "P")
   (let* ((node (consult-org-slipbox--current-or-read-node "Forward links for node: "))
-         (records (org-slipbox--plist-sequence
+         (records (consult-org-slipbox--plist-sequence
                    (plist-get
                     (org-slipbox-rpc-forward-links
                      (plist-get node :node_key)
@@ -797,7 +804,7 @@ With OTHER-WINDOW, visit the selected occurrence in another window."
 With OTHER-WINDOW, visit the selected occurrence in another window."
   (interactive "P")
   (let* ((node (consult-org-slipbox--current-or-read-node "Reflinks for node: "))
-         (records (org-slipbox--plist-sequence
+         (records (consult-org-slipbox--plist-sequence
                    (plist-get
                     (org-slipbox-rpc-reflinks
                      (plist-get node :node_key)
@@ -822,7 +829,7 @@ With OTHER-WINDOW, visit the selected occurrence in another window."
   (interactive "P")
   (let* ((node (consult-org-slipbox--current-or-read-node
                 "Unlinked references for node: "))
-         (records (org-slipbox--plist-sequence
+         (records (consult-org-slipbox--plist-sequence
                    (plist-get
                     (org-slipbox-rpc-unlinked-references
                      (plist-get node :node_key)
@@ -845,7 +852,7 @@ With OTHER-WINDOW, visit the selected occurrence in another window."
   "Visit the node stored on CANDIDATE, optionally in OTHER-WINDOW."
   (when-let ((node (consult-org-slipbox--candidate-related-node candidate)))
     (consult-org-slipbox--with-origin-window
-      (org-slipbox--visit-node node other-window))
+      (org-slipbox-node-visit node other-window))
     node))
 
 (defun consult-org-slipbox--location-action (candidate &optional other-window)
@@ -859,10 +866,10 @@ With OTHER-WINDOW, visit the selected occurrence in another window."
   "Insert a link to the node stored on CANDIDATE."
   (when-let ((node (consult-org-slipbox--candidate-related-node candidate)))
     (consult-org-slipbox--with-origin-window
-      (let ((node-with-id
-             (or (and (plist-get node :explicit_id) node)
-                 (org-slipbox-rpc-ensure-node-id (plist-get node :node_key)))))
-        (org-slipbox--insert-node-link
+        (let ((node-with-id
+               (or (and (plist-get node :explicit_id) node)
+                   (org-slipbox-rpc-ensure-node-id (plist-get node :node_key)))))
+        (org-slipbox-node-insert-link
          node-with-id
          (org-slipbox-node-formatted node-with-id))
         node))))
