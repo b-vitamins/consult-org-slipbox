@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out consult-org-slipbox
+        uses: actions/checkout@v4
+
+      - name: Check out org-slipbox
+        uses: actions/checkout@v4
+        with:
+          repository: b-vitamins/org-slipbox
+          ref: master
+          path: org-slipbox
+
+      - name: Install Emacs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y emacs-nox make
+
+      - name: Run package checks
+        run: make check ORG_SLIPBOX_DIR="$GITHUB_WORKSPACE/org-slipbox"

@@ -1,0 +1,101 @@
+#+title: =consult-org-slipbox=
+#+author: Ayan Das
+#+language: en
+
+=consult-org-slipbox= provides Consult-powered commands for the current
+=org-slipbox= query surface.  It stays thin on the Emacs side: candidate
+collections come from =org-slipbox='s indexed RPCs, while Consult handles
+narrowing, preview, and selection.  It is intended to be a standalone Emacs
+package, not a dotfiles helper.
+
+* Overview
+
+The package provides direct commands for the main read-side workflows:
+
+- =consult-org-slipbox-node-find=
+- =consult-org-slipbox-node-insert=
+- =consult-org-slipbox-file-find=
+- =consult-org-slipbox-ref-find=
+- =consult-org-slipbox-search=
+- =consult-org-slipbox-backlinks=
+- =consult-org-slipbox-forward-links=
+- =consult-org-slipbox-reflinks=
+- =consult-org-slipbox-unlinked-references=
+
+It also provides:
+
+- =consult-org-slipbox-mode= to override =org-slipbox-node-read= and
+  =org-slipbox-ref-read= so existing =org-slipbox= commands inherit Consult
+  preview and narrowing automatically
+- an optional =consult-buffer= source for open slipbox note buffers
+- Embark category actions for node, file, and location candidates when Embark
+  is installed
+
+* Installation
+
+The package is a single-file Emacs package.  During local development, place
+the repository on =load-path=.  Once published, it can be installed like any
+other ordinary package.
+
+#+begin_src elisp
+(use-package consult-org-slipbox
+  :load-path "/path/to/consult-org-slipbox"
+  :after (consult org-slipbox)
+  :init
+  (require 'consult-org-slipbox)
+  :config
+  (consult-org-slipbox-mode 1)
+  :bind (("C-c n f" . consult-org-slipbox-node-find)
+         ("C-c n i" . consult-org-slipbox-node-insert)
+         ("C-c n F" . consult-org-slipbox-file-find)
+         ("C-c n r" . consult-org-slipbox-ref-find)
+         ("C-c n /" . consult-org-slipbox-search)
+         ("C-c n l" . consult-org-slipbox-backlinks)
+         ("C-c n L" . consult-org-slipbox-forward-links)))
+#+end_src
+
+Like other Consult commands, preview can be customized with
+=consult-customize=.  For example:
+
+#+begin_src elisp
+(consult-customize
+ consult-org-slipbox-search
+ consult-org-slipbox-backlinks
+ consult-org-slipbox-forward-links
+ :preview-key "M-.")
+#+end_src
+
+If you use =consult-buffer= heavily, leave
+=consult-org-slipbox-buffer-enabled= non-nil and optionally customize:
+
+- =consult-org-slipbox-buffer-narrow-key=
+- =consult-org-slipbox-buffer-after-buffers=
+
+This installs a dedicated slipbox source containing open note buffers under
+=org-slipbox-directory=.
+
+* Verification
+
+The repository includes a =Makefile= for the standard local checks:
+
+- =make compile=
+- =make test=
+- =make checkdoc=
+- =make check=
+
+By default, these commands expect a sibling =../org-slipbox= checkout.  Override
+=ORG_SLIPBOX_DIR= if your local path differs.
+
+The GitHub Actions workflow uses the public =b-vitamins/org-slipbox=
+repository as that sibling checkout.
+
+* Notes
+
+- =consult-org-slipbox-search= uses the indexed =searchOccurrences= surface.
+  Queries shorter than three characters return no hits, matching the daemon
+  contract.
+- Backlinks, forward links, reflinks, and unlinked references default to the
+  node at point.  Outside an indexed node buffer they prompt for a node first.
+- When Embark is installed, node, file, and location candidates gain category
+  specific action maps for visit, alternate-window visit, and dedicated-buffer
+  actions.
