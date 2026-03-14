@@ -15,6 +15,20 @@ jobs:
       - name: Check out consult-org-slipbox
         uses: actions/checkout@v4
 
+      - name: Check out compat
+        uses: actions/checkout@v4
+        with:
+          repository: emacs-compat/compat
+          ref: "refs/tags/30.1.0.1"
+          path: compat
+
+      - name: Check out consult
+        uses: actions/checkout@v4
+        with:
+          repository: minad/consult
+          ref: "refs/tags/3.3"
+          path: consult
+
       - name: Check out org-slipbox
         uses: actions/checkout@v4
         with:
@@ -28,4 +42,6 @@ jobs:
           sudo apt-get install -y emacs-nox make
 
       - name: Run package checks
-        run: make check ORG_SLIPBOX_DIR="$GITHUB_WORKSPACE/org-slipbox"
+        run: |
+          export EMACSLOADPATH="$GITHUB_WORKSPACE/compat:$GITHUB_WORKSPACE/consult:"
+          make check ORG_SLIPBOX_DIR="$GITHUB_WORKSPACE/org-slipbox"
