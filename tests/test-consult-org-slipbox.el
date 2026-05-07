@@ -175,12 +175,40 @@
             (setq buffer-file-name file)
             (org-mode)
             (insert "#+title: Alpha\n\nBody\n"))
-          (should
-           (equal (consult-org-slipbox--buffer-candidates)
-                  '("Alpha | notes/alpha.org")))
+          (let ((items (consult-org-slipbox--buffer-candidates)))
+            (should (= (length items) 1))
+            (should (string= (caar items) "Alpha | notes/alpha.org"))
+            (should (eq (cdar items) buffer)))
           (should
            (eq (consult-org-slipbox--candidate-buffer "Alpha | notes/alpha.org")
+               buffer))
+          (should
+           (eq (consult-org-slipbox--candidate-buffer buffer)
                buffer)))
+      (when (buffer-live-p buffer)
+        (kill-buffer buffer)))))
+
+(ert-deftest consult-org-slipbox-test-buffer-source-preserves-buffer-pairs ()
+  "Slipbox source items should preserve Consult's native buffer payloads."
+  (let* ((org-slipbox-directory (make-temp-file "consult-org-slipbox-root" t))
+         (file (expand-file-name "notes/beta.org" org-slipbox-directory))
+         (buffer (generate-new-buffer " beta")))
+    (unwind-protect
+        (progn
+          (make-directory (file-name-directory file) t)
+          (with-current-buffer buffer
+            (setq buffer-file-name file)
+            (org-mode)
+            (insert "#+title: Beta\n\nBody\n"))
+          (consult-org-slipbox--refresh-buffer-source)
+          (let ((items (funcall (plist-get consult-org-slipbox-buffer-source
+                                           :items))))
+            (should (cl-some
+                     (lambda (item)
+                       (and (consp item)
+                            (string= (car item) "Beta | notes/beta.org")
+                            (eq (cdr item) buffer)))
+                     items))))
       (when (buffer-live-p buffer)
         (kill-buffer buffer)))))
 

@@ -279,18 +279,21 @@ plist accepted by `consult-org-slipbox--preview-buffer'."
            (org-slipbox-file-p file)))))
 
 (defun consult-org-slipbox--buffer-candidates ()
-  "Return `consult-buffer' candidates for open slipbox note buffers."
+  "Return `consult-buffer' pairs for open slipbox note buffers."
   (let ((buffers
          (seq-filter #'consult-org-slipbox--note-buffer-p (buffer-list))))
     (setq consult-org-slipbox--buffer-alist
           (mapcar (lambda (buffer)
                     (cons (consult-org-slipbox--buffer-visible-name buffer) buffer))
                   buffers))
-    (mapcar #'car consult-org-slipbox--buffer-alist)))
+    consult-org-slipbox--buffer-alist))
 
 (defun consult-org-slipbox--candidate-buffer (candidate)
   "Return the live buffer associated with `consult-buffer' CANDIDATE."
-  (cdr (assoc candidate consult-org-slipbox--buffer-alist)))
+  (cond
+   ((and (bufferp candidate) (buffer-live-p candidate)) candidate)
+   ((stringp candidate)
+    (cdr (assoc candidate consult-org-slipbox--buffer-alist)))))
 
 (defun consult-org-slipbox--buffer-state ()
   "Return a preview state function for the slipbox `consult-buffer' source."
@@ -328,14 +331,14 @@ plist accepted by `consult-org-slipbox--preview-buffer'."
   "Return the default `consult-source-buffer' items."
   (consult--buffer-query
    :sort 'visibility
-   :as #'buffer-name
+   :as #'consult--buffer-pair
    :predicate nil))
 
 (defun consult-org-slipbox--non-slipbox-buffer-items ()
   "Return `consult-source-buffer' items excluding slipbox note buffers."
   (consult--buffer-query
    :sort 'visibility
-   :as #'buffer-name
+   :as #'consult--buffer-pair
    :predicate (lambda (buffer)
                 (not (consult-org-slipbox--note-buffer-p buffer)))))
 

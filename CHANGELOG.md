@@ -6,6 +6,12 @@ The format follows Keep a Changelog, and this project follows SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- Preserve Consult's native `(label . buffer)` candidate shape for slipbox
+  buffer sources so completion metadata, preview, and icon integrations receive
+  live buffer payloads instead of display labels.
+
 ## [0.1.0] - 2026-03-14
 
 ### Added
