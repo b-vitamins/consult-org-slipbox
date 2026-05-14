@@ -4,7 +4,7 @@
 
 ;; Author: Ayan Das <bvits@riseup.net>
 ;; Maintainer: Ayan Das <bvits@riseup.net>
-;; Version: 0.1.0
+;; Version: 0.2.0
 ;; Package-Requires: ((emacs "29.1") (consult "3.3") (org-slipbox "0.13.2"))
 ;; Keywords: outlines, files, convenience
 ;; URL: https://github.com/b-vitamins/consult-org-slipbox

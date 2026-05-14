@@ -6,6 +6,8 @@ The format follows Keep a Changelog, and this project follows SemVer.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-15
+
 ### Added
 
 - Added `consult-org-slipbox-agenda` for Consult-backed selection of indexed
