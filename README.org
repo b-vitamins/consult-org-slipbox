@@ -17,6 +17,8 @@ The package provides direct commands for the main read-side workflows:
 - =consult-org-slipbox-file-find=
 - =consult-org-slipbox-ref-find=
 - =consult-org-slipbox-search=
+- =consult-org-slipbox-agenda=
+- =consult-org-slipbox-artifact-load=
 - =consult-org-slipbox-backlinks=
 - =consult-org-slipbox-forward-links=
 - =consult-org-slipbox-reflinks=
@@ -50,6 +52,8 @@ other ordinary package.
          ("C-c n F" . consult-org-slipbox-file-find)
          ("C-c n r" . consult-org-slipbox-ref-find)
          ("C-c n /" . consult-org-slipbox-search)
+         ("C-c n a" . consult-org-slipbox-agenda)
+         ("C-c n A" . consult-org-slipbox-artifact-load)
          ("C-c n l" . consult-org-slipbox-backlinks)
          ("C-c n L" . consult-org-slipbox-forward-links)))
 #+end_src
@@ -60,6 +64,7 @@ Like other Consult commands, preview can be customized with
 #+begin_src elisp
 (consult-customize
  consult-org-slipbox-search
+ consult-org-slipbox-agenda
  consult-org-slipbox-backlinks
  consult-org-slipbox-forward-links
  :preview-key "M-.")
@@ -94,6 +99,13 @@ repository as that sibling checkout.
 - =consult-org-slipbox-search= uses the indexed =searchOccurrences= surface.
   Queries shorter than three characters return no hits, matching the daemon
   contract.
+- =consult-org-slipbox-agenda= prompts for a date, queries the indexed agenda
+  surface for that day, previews matching scheduled/deadline nodes, and visits
+  the selected entry.
+- =consult-org-slipbox-artifact-load= selects a saved exploration artifact and
+  restores it through =org-slipbox='s dedicated cockpit.  It intentionally does
+  not preview-load artifacts while narrowing, since restore mutates cockpit
+  session state.
 - Backlinks, forward links, reflinks, and unlinked references default to the
   node at point.  Outside an indexed node buffer they prompt for a node first.
 - When Embark is installed, node, file, and location candidates gain category

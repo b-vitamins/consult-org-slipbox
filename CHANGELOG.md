@@ -6,6 +6,13 @@ The format follows Keep a Changelog, and this project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- Added `consult-org-slipbox-agenda` for Consult-backed selection of indexed
+  scheduled/deadline nodes by date.
+- Added `consult-org-slipbox-artifact-load` for selecting saved exploration
+  artifacts and restoring them through the dedicated `org-slipbox` cockpit.
+
 ### Changed
 
 - Preserve Consult's native `(label . buffer)` candidate shape for slipbox

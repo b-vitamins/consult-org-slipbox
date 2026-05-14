@@ -27,8 +27,8 @@
 ;;; Commentary:
 
 ;; Consult-powered interactive commands for org-slipbox.  The package provides
-;; direct commands for node, ref, file, occurrence, and related-note
-;; workflows, plus an optional minor mode which overrides
+;; direct commands for node, ref, file, occurrence, agenda, related-note, and
+;; saved-cockpit-artifact workflows, plus an optional minor mode which overrides
 ;; `org-slipbox-node-read' and `org-slipbox-ref-read' and can install a
 ;; dedicated `consult-buffer' source for open slipbox note buffers.
 
