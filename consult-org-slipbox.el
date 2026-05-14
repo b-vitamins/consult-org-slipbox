@@ -107,6 +107,9 @@ This source is installed by `consult-org-slipbox-mode'."
 (defvar consult-org-slipbox-agenda-history nil
   "Minibuffer history for `consult-org-slipbox-agenda'.")
 
+(defvar consult-org-slipbox-artifact-history nil
+  "Minibuffer history for `consult-org-slipbox-artifact-load'.")
+
 (defvar consult-buffer-sources)
 
 (defconst consult-org-slipbox--commands
@@ -116,6 +119,7 @@ This source is installed by `consult-org-slipbox-mode'."
     consult-org-slipbox-ref-find
     consult-org-slipbox-search
     consult-org-slipbox-agenda
+    consult-org-slipbox-artifact-load
     consult-org-slipbox-backlinks
     consult-org-slipbox-forward-links
     consult-org-slipbox-reflinks
@@ -627,6 +631,40 @@ the record plist for custom annotation functions."
          (not (string-empty-p timing))
          (concat " " timing))))
 
+(defun consult-org-slipbox--artifact-summaries ()
+  "Return saved exploration artifact summaries."
+  (consult-org-slipbox--plist-sequence
+   (plist-get (org-slipbox-rpc-list-exploration-artifacts) :artifacts)))
+
+(defun consult-org-slipbox--artifact-label (summary)
+  "Return a visible label for artifact SUMMARY."
+  (let ((title (string-trim (or (plist-get summary :title) "")))
+        (artifact-id (or (plist-get summary :artifact_id) ""))
+        (kind (or (plist-get summary :kind) "artifact")))
+    (if (string-empty-p title)
+        (format "%s | %s" artifact-id kind)
+      (format "%s | %s | %s" title kind artifact-id))))
+
+(defun consult-org-slipbox--artifact-candidates (summaries)
+  "Return Consult artifact candidates from SUMMARIES."
+  (cl-loop for summary in summaries
+           for index from 0
+           collect
+           (consult-org-slipbox--decorate-candidate
+            (concat (consult-org-slipbox--artifact-label summary)
+                    (consult--tofu-encode index))
+            summary
+            nil
+            nil
+            (or (plist-get summary :kind) "artifact"))))
+
+(defun consult-org-slipbox--artifact-annotation (candidate)
+  "Return an annotation for artifact CANDIDATE."
+  (let* ((summary (consult-org-slipbox--candidate-value candidate))
+         (text (string-trim (or (plist-get summary :summary) ""))))
+    (and (not (string-empty-p text))
+         (concat " " text))))
+
 (defun consult-org-slipbox--current-or-read-node (prompt)
   "Return the current indexed node, or read one using PROMPT."
   (or (org-slipbox-node-at-point)
@@ -843,6 +881,27 @@ visit the selected agenda entry in another window."
        (consult-org-slipbox--record-target selection)
        other-window)
       selection)))
+
+;;;###autoload
+(defun consult-org-slipbox-artifact-load ()
+  "Load a saved exploration artifact into the dedicated cockpit using Consult."
+  (interactive)
+  (let ((summaries (consult-org-slipbox--artifact-summaries)))
+    (unless summaries
+      (user-error "No saved exploration artifacts"))
+    (let* ((summary
+            (consult--read
+             (consult-org-slipbox--artifact-candidates summaries)
+             :prompt "Open artifact: "
+             :sort nil
+             :require-match t
+             :category 'org-slipbox-artifact
+             :history 'consult-org-slipbox-artifact-history
+             :group #'consult--prefix-group
+             :annotate #'consult-org-slipbox--artifact-annotation
+             :lookup #'consult--lookup-candidate))
+           (artifact-id (plist-get summary :artifact_id)))
+      (org-slipbox-buffer-load-artifact-by-id artifact-id))))
 
 ;;;###autoload
 (defun consult-org-slipbox-backlinks (&optional other-window)

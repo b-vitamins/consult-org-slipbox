@@ -188,6 +188,51 @@
        (equal selected-target
               (list '(:file_path "agenda.org" :line 4 :col 1) t))))))
 
+(ert-deftest consult-org-slipbox-test-artifact-load-selects-without-preview-side-effects ()
+  "Artifact picker should load only the selected saved artifact."
+  (let ((prompt nil)
+        (annotation nil)
+        (group nil)
+        (state-present nil)
+        (loaded-id nil))
+    (cl-letf* (((symbol-function 'org-slipbox-rpc-list-exploration-artifacts)
+                (lambda ()
+                  '(:artifacts
+                    [(:artifact_id "artifact/alpha"
+                      :title "Alpha Trail"
+                      :summary "Saved exploratory trail"
+                      :kind "trail")
+                     (:artifact_id "artifact/beta"
+                      :title "Beta Lens"
+                      :kind "lens-view")])))
+               ((symbol-function 'consult--read)
+                (lambda (candidates &rest plist)
+                  (let ((candidate (car candidates)))
+                    (setq prompt (plist-get plist :prompt)
+                          annotation (funcall (plist-get plist :annotate)
+                                              candidate)
+                          group (get-text-property 0
+                                                   'consult--prefix-group
+                                                   candidate)
+                          state-present (plist-member plist :state))
+                    (funcall (plist-get plist :lookup)
+                             candidate
+                             candidates
+                             nil
+                             nil))))
+               ((symbol-function 'org-slipbox-buffer-load-artifact-by-id)
+                (lambda (artifact-id)
+                  (setq loaded-id artifact-id)
+                  `(:artifact_id ,artifact-id :executed t))))
+      (should
+       (equal (consult-org-slipbox-artifact-load)
+              '(:artifact_id "artifact/alpha" :executed t)))
+      (should (equal loaded-id "artifact/alpha"))
+      (should (equal prompt "Open artifact: "))
+      (should (equal annotation " Saved exploratory trail"))
+      (should (equal group "trail"))
+      (should-not state-present))))
+
 (ert-deftest consult-org-slipbox-test-backlinks-use-current-node-and-visit-selection ()
   "Backlink command should query the node at point and visit the chosen hit."
   (let ((visited nil))
