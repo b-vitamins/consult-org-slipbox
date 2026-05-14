@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: b-vitamins/org-slipbox
-          ref: master
+          ref: "refs/tags/v0.13.2"
           path: org-slipbox
 
       - name: Install Emacs

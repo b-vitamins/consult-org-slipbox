@@ -1,6 +1,6 @@
 ;;; test-consult-org-slipbox.el --- Tests for consult-org-slipbox -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2026 org-slipbox contributors
+;; Copyright (C) 2026 Ayan Das
 
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
