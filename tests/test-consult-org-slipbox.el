@@ -136,6 +136,58 @@
        (equal selected-target
               (list '(:file_path "notes/alpha.org" :line 9 :col 5) t))))))
 
+(ert-deftest consult-org-slipbox-test-agenda-uses-rpc-and-visits-selection ()
+  "Agenda picker should query an indexed date range and visit the selected node."
+  (let ((time (encode-time 0 0 0 7 3 2026))
+        (start nil)
+        (end nil)
+        (prompt nil)
+        (annotation nil)
+        (group nil)
+        (selected-target nil))
+    (cl-letf* (((symbol-function 'org-slipbox-rpc-agenda)
+                (lambda (start-arg end-arg)
+                  (setq start start-arg
+                        end end-arg)
+                  '(:nodes
+                    [(:node_key "heading:agenda.org:4"
+                      :file_path "agenda.org"
+                      :title "Scheduled"
+                      :line 4
+                      :scheduled_for "2026-03-07T09:00:00")])))
+               ((symbol-function 'consult--read)
+                (lambda (candidates &rest plist)
+                  (let ((candidate (car candidates)))
+                    (setq prompt (plist-get plist :prompt)
+                          annotation (funcall (plist-get plist :annotate)
+                                              candidate)
+                          group (get-text-property 0
+                                                   'consult--prefix-group
+                                                   candidate))
+                    (funcall (plist-get plist :lookup)
+                             candidate
+                             candidates
+                             nil
+                             nil))))
+               ((symbol-function 'consult-org-slipbox--visit-target)
+                (lambda (target &optional other-window)
+                  (setq selected-target (list target other-window)))))
+      (should
+       (equal (consult-org-slipbox-agenda t time)
+              '(:node_key "heading:agenda.org:4"
+                :file_path "agenda.org"
+                :title "Scheduled"
+                :line 4
+                :scheduled_for "2026-03-07T09:00:00")))
+      (should (equal start "2026-03-07T00:00:00"))
+      (should (equal end "2026-03-07T23:59:59"))
+      (should (equal prompt "Agenda 2026-03-07: "))
+      (should (equal annotation " SCHEDULED 2026-03-07"))
+      (should (equal group "scheduled"))
+      (should
+       (equal selected-target
+              (list '(:file_path "agenda.org" :line 4 :col 1) t))))))
+
 (ert-deftest consult-org-slipbox-test-backlinks-use-current-node-and-visit-selection ()
   "Backlink command should query the node at point and visit the chosen hit."
   (let ((visited nil))

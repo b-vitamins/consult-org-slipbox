@@ -104,6 +104,9 @@ This source is installed by `consult-org-slipbox-mode'."
 (defvar consult-org-slipbox-location-history nil
   "Minibuffer history for location-oriented org-slipbox commands.")
 
+(defvar consult-org-slipbox-agenda-history nil
+  "Minibuffer history for `consult-org-slipbox-agenda'.")
+
 (defvar consult-buffer-sources)
 
 (defconst consult-org-slipbox--commands
@@ -112,6 +115,7 @@ This source is installed by `consult-org-slipbox-mode'."
     consult-org-slipbox-file-find
     consult-org-slipbox-ref-find
     consult-org-slipbox-search
+    consult-org-slipbox-agenda
     consult-org-slipbox-backlinks
     consult-org-slipbox-forward-links
     consult-org-slipbox-reflinks
@@ -128,6 +132,20 @@ This source is installed by `consult-org-slipbox-mode'."
 (defun consult-org-slipbox--node-title (node)
   "Return the preferred display title for NODE."
   (or (plist-get node :title) ""))
+
+(defun consult-org-slipbox--node-label (node)
+  "Return a compact label for NODE."
+  (let ((title (consult-org-slipbox--node-title node))
+        (file (consult-org-slipbox--relative-file node))
+        (line (plist-get node :line)))
+    (string-join
+     (delq nil
+           (list (unless (string-empty-p title) title)
+                 (unless (string-empty-p file)
+                   (if line
+                       (format "%s:%s" file line)
+                     file))))
+     " | ")))
 
 (defun consult-org-slipbox--plist-sequence (value)
   "Normalize JSON-derived VALUE into an Emacs list."
@@ -562,6 +580,53 @@ the record plist for custom annotation functions."
             (plist-get record :source_node)
             :matched_text)))
 
+(defun consult-org-slipbox--agenda-day-range (time)
+  "Return the inclusive ISO day range for TIME."
+  (cons (format-time-string "%Y-%m-%dT00:00:00" time)
+        (format-time-string "%Y-%m-%dT23:59:59" time)))
+
+(defun consult-org-slipbox--agenda-timing (node)
+  "Return a compact agenda timing summary for NODE."
+  (string-join
+   (delq nil
+         (list
+          (when-let ((scheduled (plist-get node :scheduled_for)))
+            (format "SCHEDULED %s" (substring scheduled 0 10)))
+          (when-let ((deadline (plist-get node :deadline_for)))
+            (format "DEADLINE %s" (substring deadline 0 10)))))
+   " "))
+
+(defun consult-org-slipbox--agenda-group (node)
+  "Return the Consult group name for agenda NODE."
+  (cond
+   ((and (plist-get node :scheduled_for)
+         (plist-get node :deadline_for))
+    "scheduled + deadline")
+   ((plist-get node :deadline_for) "deadline")
+   ((plist-get node :scheduled_for) "scheduled")
+   (t "agenda")))
+
+(defun consult-org-slipbox--agenda-candidates (nodes)
+  "Return Consult agenda candidates from NODES."
+  (cl-loop for node in nodes
+           for index from 0
+           collect
+           (consult-org-slipbox--decorate-candidate
+            (concat (consult-org-slipbox--node-label node)
+                    (consult--tofu-encode index))
+            node
+            (consult-org-slipbox--record-target node)
+            node
+            (consult-org-slipbox--agenda-group node))))
+
+(defun consult-org-slipbox--agenda-annotation (candidate)
+  "Return an annotation for agenda CANDIDATE."
+  (let* ((node (consult-org-slipbox--candidate-value candidate))
+         (timing (and node (consult-org-slipbox--agenda-timing node))))
+    (and timing
+         (not (string-empty-p timing))
+         (concat " " timing))))
+
 (defun consult-org-slipbox--current-or-read-node (prompt)
   "Return the current indexed node, or read one using PROMPT."
   (or (org-slipbox-node-at-point)
@@ -750,6 +815,32 @@ INITIAL-INPUT seeds the minibuffer when called non-interactively."
     (when selection
       (consult-org-slipbox--visit-target
        (consult-org-slipbox--occurrence-target selection)
+       other-window)
+      selection)))
+
+;;;###autoload
+(defun consult-org-slipbox-agenda (&optional other-window time)
+  "Select an indexed agenda entry for TIME using Consult.
+When called interactively, prompt for the agenda date.  With OTHER-WINDOW,
+visit the selected agenda entry in another window."
+  (interactive
+   (list current-prefix-arg
+         (let ((org-read-date-prefer-future current-prefix-arg))
+           (org-read-date nil t nil "Agenda date: "))))
+  (let* ((time (or time (current-time)))
+         (range (consult-org-slipbox--agenda-day-range time))
+         (nodes (consult-org-slipbox--plist-sequence
+                 (plist-get (org-slipbox-rpc-agenda (car range) (cdr range))
+                            :nodes))))
+    (unless nodes
+      (user-error "No agenda entries found"))
+    (when-let ((selection
+                (consult-org-slipbox--read-location
+                 (format "Agenda %s: " (format-time-string "%Y-%m-%d" time))
+                 (consult-org-slipbox--agenda-candidates nodes)
+                 #'consult-org-slipbox--agenda-annotation)))
+      (consult-org-slipbox--visit-target
+       (consult-org-slipbox--record-target selection)
        other-window)
       selection)))
 
